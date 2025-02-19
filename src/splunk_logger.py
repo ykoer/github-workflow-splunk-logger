@@ -26,9 +26,6 @@ def log_error(message):
     """Log an error message"""
     print(f"::error::{message}")
 
-def send_to_splunk_(splunk_url, token, event_data: dict, ssl_verify: bool, timeout: str, max_retries: str):
-    print("Sending logs to Splunk")
-
 def send_to_splunk(splunk_url, token, event_data: dict, ssl_verify: bool, timeout: str, max_retries: str):
     """Send data to Splunk HTTP Event Collector"""
     splunk_hec_endpoint = f"{splunk_url}/services/collector"
