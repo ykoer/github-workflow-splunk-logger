@@ -71,6 +71,7 @@ runs:
   using: 'docker'
   image: 'docker://ghcr.io/ykoer/github-workflow-splunk-logger:v1'
   args:
+    - "python"
     - "/app/splunk_logger.py"
   env:
     INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
