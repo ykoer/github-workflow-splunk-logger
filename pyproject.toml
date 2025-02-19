@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "github-workflow-splunk"
+version = "0.1.0"
+description = "GitHub Action to send workflow logs to Splunk"
+requires-python = ">=3.8"
+dependencies = [
+    "requests",
+    "PyGithub",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v"
+pythonpath = [
+    "."
+] 

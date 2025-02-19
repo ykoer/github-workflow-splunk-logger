@@ -1,0 +1,83 @@
+name: 'Send GitHub Workflow Logs to Splunk'
+description: 'Collects GitHub workflow logs and sends them to a Splunk HTTP Event Collector (HEC)'
+
+inputs:
+  splunk_url:
+    description: 'URL of the Splunk HTTP Event Collector (HEC) including the port (e.g., https://splunk.example.com:8088)'
+    required: true
+  splunk_token:
+    description: 'HEC token for authentication'
+    required: true
+  run_id:
+    description: 'ID of the specific workflow run (defaults to current run)'
+    required: false
+    default: ${{ github.run_id }}
+  index:
+    description: 'Splunk index to send the logs to'
+    required: false
+    # An empty string defaults to the index associated with the HEC token.
+    default: ''
+  source_type:
+    description: 'Splunk source type for the data'
+    required: false
+    default: 'github:workflow:logs'
+  ssl_verify:
+    description: 'Whether to verify SSL certificates when connecting to Splunk'
+    required: false
+    default: 'true'
+  include_job_steps:
+    description: 'Whether to include individual job step logs'
+    required: false
+    default: 'true'
+  timeout:
+    description: 'HTTP request timeout in seconds'
+    required: false
+    default: '30'
+  max_retries:
+    description: 'Maximum number of retries for failed requests'
+    required: false
+    default: '3'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ github.action_path }}/requirements.txt
+    
+    - name: Run script
+      shell: bash
+      run: python ${{ github.action_path }}/src/github_workflow_splunk_logger.py
+      env:
+        INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
+        INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
+        INPUT_RUN_ID: ${{ inputs.run_id }}
+        INPUT_INDEX: ${{ inputs.index }}
+        INPUT_SOURCE_TYPE: ${{ inputs.source_type }}
+        INPUT_SSL_VERIFY: ${{ inputs.ssl_verify }}
+        INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
+        GITHUB_TOKEN: ${{ github.token }}
+
+# runs:
+#   using: 'docker'
+#   image: 'ghcr.io/ykoer/send-logs-to-splunk:v1'  # Use a pre-built image
+#   env:
+#     INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
+#     INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
+#     INPUT_RUN_ID: ${{ inputs.run_id }}
+#     INPUT_INDEX: ${{ inputs.index }}
+#     INPUT_SOURCE_TYPE: ${{ inputs.source_type }}
+#     INPUT_SSL_VERIFY: ${{ inputs.ssl_verify }}
+#     INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
+#     INPUT_TIMEOUT: ${{ inputs.timeout }}
+#     INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
+#     GITHUB_TOKEN: ${{ github.token }}
