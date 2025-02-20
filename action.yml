@@ -39,45 +39,49 @@ inputs:
     default: '3'
 
 runs:
-  using: 'composite'
-  steps:
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-    
-    - name: Install dependencies
-      shell: bash
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ${{ github.action_path }}/requirements.txt
-    
-    - name: Run script
-      shell: bash
-      run: python ${{ github.action_path }}/src/github_workflow_splunk_logger.py
-      env:
-        INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
-        INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
-        INPUT_RUN_ID: ${{ inputs.run_id }}
-        INPUT_INDEX: ${{ inputs.index }}
-        INPUT_SOURCE_TYPE: ${{ inputs.source_type }}
-        INPUT_SSL_VERIFY: ${{ inputs.ssl_verify }}
-        INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
-        INPUT_TIMEOUT: ${{ inputs.timeout }}
-        INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
-        GITHUB_TOKEN: ${{ github.token }}
+  using: 'docker'
+  image: 'docker://ghcr.io/ykoer/github-workflow-splunk-logger:v1'
+  args:
+    - "python"
+    - "/app/splunk_logger.py"
+  env:
+    GITHUB_TOKEN: ${{ inputs.github_token }}
+    INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
+    INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
+    INPUT_RUN_ID: ${{ inputs.run_id }}
+    INPUT_INDEX: ${{ inputs.index }}
+    INPUT_SOURCE_TYPE: ${{ inputs.source_type }}
+    INPUT_SSL_VERIFY: ${{ inputs.ssl_verify }}
+    INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
+    INPUT_TIMEOUT: ${{ inputs.timeout }}
+    INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
 
 # runs:
-#   using: 'docker'
-#   image: 'ghcr.io/ykoer/send-logs-to-splunk:v1'  # Use a pre-built image
-#   env:
-#     INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
-#     INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
-#     INPUT_RUN_ID: ${{ inputs.run_id }}
-#     INPUT_INDEX: ${{ inputs.index }}
-#     INPUT_SOURCE_TYPE: ${{ inputs.source_type }}
-#     INPUT_SSL_VERIFY: ${{ inputs.ssl_verify }}
-#     INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
-#     INPUT_TIMEOUT: ${{ inputs.timeout }}
-#     INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
-#     GITHUB_TOKEN: ${{ github.token }}
+#   using: 'composite'
+#   steps:
+#     - name: Setup Python
+#       uses: actions/setup-python@v4
+#       with:
+#         python-version: '3.12'
+    
+#     - name: Install dependencies
+#       shell: bash
+#       run: |
+#         python -m pip install --upgrade pip
+#         pip install -r ${{ github.action_path }}/requirements.txt
+    
+#     - name: Run script
+#       shell: bash
+#       run: python ${{ github.action_path }}/src/github_workflow_splunk_logger.py
+#       env:
+#         INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
+#         INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
+#         INPUT_RUN_ID: ${{ inputs.run_id }}
+#         INPUT_INDEX: ${{ inputs.index }}
+#         INPUT_SOURCE_TYPE: ${{ inputs.source_type }}
+#         INPUT_SSL_VERIFY: ${{ inputs.ssl_verify }}
+#         INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
+#         INPUT_TIMEOUT: ${{ inputs.timeout }}
+#         INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
+#         GITHUB_TOKEN: ${{ github.token }}
+
