@@ -159,6 +159,10 @@ def main():
                         "job_status": job.conclusion or job.status,
                         "workflow_name": workflow_run.name,
                         "workflow_run_id": workflow_run.id,
+                        "status": job.status,
+                        "conclusion": job.conclusion,
+                        "created_at": job.started_at.isoformat(),
+                        "completed_at": job.completed_at.isoformat(),
                         "repository": {
                             "owner": owner_name,
                             "name": repo_name,
@@ -167,9 +171,11 @@ def main():
                         "logs": job_logs
                     },
                     "sourcetype": f"{source_type}:job",
-                    "source": f"github:{owner_name}/{repo_name}:workflow:{workflow_run.name}:job:{job.name}",
-                    "index": index
+                    "source": f"github:{owner_name}/{repo_name}:workflow:{workflow_run.name}:job:{job.name}"
                 }
+
+                if index:
+                    job_log_event["index"] = index
                 
                 # Send job log to Splunk
                 send_to_splunk(splunk_url, splunk_token, job_log_event, ssl_verify, timeout, max_retries)
