@@ -2,6 +2,9 @@ name: 'Send GitHub Workflow Logs to Splunk'
 description: 'Collects GitHub workflow logs and sends them to a Splunk HTTP Event Collector (HEC)'
 
 inputs:
+  github_token:
+    description: 'GitHub personal access token with repo scope'
+    required: true
   splunk_url:
     description: 'URL of the Splunk HTTP Event Collector (HEC) including the port (e.g., https://splunk.example.com:8088)'
     required: true
@@ -38,6 +41,9 @@ inputs:
     required: false
     default: '3'
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                        Run the action using a Docker container                                       #
+# -------------------------------------------------------------------------------------------------------------------- #
 runs:
   using: 'docker'
   image: 'docker://ghcr.io/ykoer/github-workflow-splunk-logger:v1'
@@ -56,6 +62,9 @@ runs:
     INPUT_TIMEOUT: ${{ inputs.timeout }}
     INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                        Run the action using a composite action                                       #
+# -------------------------------------------------------------------------------------------------------------------- #
 # runs:
 #   using: 'composite'
 #   steps:
