@@ -167,7 +167,7 @@ def main():
     splunk_token = args.splunk_token or get_input("splunk_token", required=running_in_github) or os.environ.get("SPLUNK_TOKEN")
     github_repo_name = args.repo or os.environ.get("GITHUB_REPOSITORY")
     github_token = args.github_token or os.environ.get("GITHUB_TOKEN")
-    run_id = int(args.run_id or os.environ.get("GITHUB_RUN_ID"))
+    run_id = int(args.run_id or get_input("run_id", required=running_in_github) or os.environ.get("GITHUB_RUN_ID"))
     index = args.index
     source_type = args.source_type
     ssl_verify = args.ssl_verify
@@ -175,6 +175,8 @@ def main():
     timeout = int(args.timeout)
     max_retries = int(args.max_retries)
     debug = args.debug
+
+    print(f"run_id: {run_id}")
 
     if not splunk_url:
         print("Spkunk URL is required. Pass Github Action splunk_url, set SPLUNK_URL environment variable or use --splunk-url")
