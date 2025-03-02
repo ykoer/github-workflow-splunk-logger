@@ -80,3 +80,66 @@ The action:
 This action automatically installs:
 - Python 3.12
 - Required Python packages (`requests`, `PyGithub`)
+
+
+## Splunk Event Message Format
+### Workflow Event
+```json
+{
+    "event": {
+        "workflow": {
+            "id": 13592533082,
+            "name": "PR Validation - Auto Triggered",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2025-02-28T16:41:49+00:00",
+            "updated_at": "2025-02-28T16:43:21+00:00",
+            "url": "https://api.github.com/repos/Red-Hat-SFDC/redhatcrm/actions/runs/13592533082",
+            "html_url": "https://github.com/Red-Hat-SFDC/redhatcrm/actions/runs/13592533082"
+        },
+        "repository": {
+            "owner": "Red-Hat-SFDC",
+            "name": "redhatcrm",
+            "full_name": "Red-Hat-SFDC/redhatcrm"
+        }
+    },
+    "sourcetype": "github:workflow:logs",
+    "source": "github:Red-Hat-SFDC/redhatcrm:workflow:PR Validation - Auto Triggered"
+}
+```
+
+### Job Event
+```json
+{
+    "event": {
+        "job_id": 38001869842,
+        "job_name": "Validate Changed Packages",
+        "job_status": "skipped",
+        "job_created_at": "2025-02-28T16:41:51+00:00",
+        "job_completed_at": "2025-02-28T16:41:51+00:00",
+        "job.status": "completed",
+        "workflow_name": "PR Validation - Auto Triggered",
+        "workflow_run_id": 13592533082,
+        "logs": ""
+    },
+    "sourcetype": "github:workflow:logs:job",
+    "source": "github:Red-Hat-SFDC/redhatcrm:workflow:PR Validation - Auto Triggered:job:Validate Changed Packages"
+}
+```
+```json
+{
+    "event": {
+        "job_id": 38001870192,
+        "job_name": "See if Static Analysis should run",
+        "job_status": "success",
+        "job_created_at": "2025-02-28T16:41:52+00:00",
+        "job_completed_at": "2025-02-28T16:42:28+00:00",
+        "job.status": "completed",
+        "workflow_name": "PR Validation - Auto Triggered",
+        "workflow_run_id": 13592533082,
+        "logs": "Logs unavailable for job: See if Static Analysis should run"
+    },
+    "sourcetype": "github:workflow:logs:job",
+    "source": "github:Red-Hat-SFDC/redhatcrm:workflow:PR Validation - Auto Triggered:job:See if Static Analysis should run"
+}
+```

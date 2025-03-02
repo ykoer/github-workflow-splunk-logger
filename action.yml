@@ -2,6 +2,9 @@ name: 'Send GitHub Workflow Logs to Splunk'
 description: 'Collects GitHub workflow logs and sends them to a Splunk HTTP Event Collector (HEC)'
 
 inputs:
+  github_token:
+    description: 'GitHub personal access token with repo scope'
+    required: true
   splunk_url:
     description: 'URL of the Splunk HTTP Event Collector (HEC) including the port (e.g., https://splunk.example.com:8088)'
     required: true
@@ -37,7 +40,14 @@ inputs:
     description: 'Maximum number of retries for failed requests'
     required: false
     default: '3'
+  debug:
+    description: 'Enable debug mode to print the Splunk event payload instead of sending it to Splunk.' 
+    required: false
+    default: 'false'
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                        Run the action using a Docker container                                       #
+# -------------------------------------------------------------------------------------------------------------------- #
 runs:
   using: 'docker'
   image: 'docker://ghcr.io/ykoer/github-workflow-splunk-logger:v1'
@@ -55,7 +65,11 @@ runs:
     INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
     INPUT_TIMEOUT: ${{ inputs.timeout }}
     INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
+    INPUT_DEBUG: ${{ inputs.debug }}
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                        Run the action using a composite action                                       #
+# -------------------------------------------------------------------------------------------------------------------- #
 # runs:
 #   using: 'composite'
 #   steps:
@@ -74,6 +88,7 @@ runs:
 #       shell: bash
 #       run: python ${{ github.action_path }}/src/github_workflow_splunk_logger.py
 #       env:
+#         GITHUB_TOKEN: ${{ github.token }}
 #         INPUT_SPLUNK_URL: ${{ inputs.splunk_url }}
 #         INPUT_SPLUNK_TOKEN: ${{ inputs.splunk_token }}
 #         INPUT_RUN_ID: ${{ inputs.run_id }}
@@ -83,5 +98,5 @@ runs:
 #         INPUT_INCLUDE_JOB_STEPS: ${{ inputs.include_job_steps }}
 #         INPUT_TIMEOUT: ${{ inputs.timeout }}
 #         INPUT_MAX_RETRIES: ${{ inputs.max_retries }}
-#         GITHUB_TOKEN: ${{ github.token }}
+#         INPUT_DEBUG: ${{ inputs.debug }}
 
