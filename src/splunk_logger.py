@@ -7,6 +7,13 @@ import os
 import sys
 import time
 from github import Github
+from typing import Dict
+
+def get_headers(github_token: str) -> Dict[str, str]:
+    return {
+        "Accept": "application/vnd.github.groot-preview+json",
+        "Authorization": f"token {github_token}"
+    }
 
 def get_input(name: str, required: bool=False, default: str=None):
     """Gets the input value from environment variables"""
@@ -29,7 +36,8 @@ def log_error(message: str):
 
 def send_to_splunk(splunk_url: str, token: str, event_data: dict, ssl_verify: bool, timeout: str, max_retries: str, debug: bool = False):
     """Send data to Splunk HTTP Event Collector"""
-    splunk_hec_endpoint = f"{splunk_url}/services/collector"
+    splunk_hec_endpoint = f"{splunk_url}/services/collector/event"
+    print(splunk_hec_endpoint)
     
     headers = {
         'Authorization': f"Splunk {token}",
@@ -66,6 +74,31 @@ def send_to_splunk(splunk_url: str, token: str, event_data: dict, ssl_verify: bo
         print(f"Attempting to send data to Splunk HEC to {splunk_hec_endpoint}")
         print(json.dumps(event_data, indent=4))
 
+def fetch_pull_request_info(github_token: str, repo_name:str, commit_sha: str) -> Dict:
+    url = f"https://api.github.com/repos/{repo_name}/commits/{commit_sha}/pulls"
+
+    response = requests.get(url, headers=get_headers(github_token))
+    response.raise_for_status()
+    pulls = response.json()
+
+    pr_data = {}
+    if pulls:
+        pr_data = {
+            "number": pulls[0]["number"],
+            "title": pulls[0]["title"],
+            "state": pulls[0]["state"],
+            "created_at": pulls[0]["created_at"],
+            "updated_at": pulls[0]["updated_at"],
+            "closed_at": pulls[0]["closed_at"],
+            "merged_at": pulls[0]["merged_at"],
+            "merge_commit_sha": pulls[0]["merge_commit_sha"],
+            "assignees": list(map(lambda assignee: assignee['login'], pulls[0]["assignees"])),
+            "requested_reviewers": list(map(lambda reviewer: reviewer['login'], pulls[0]["requested_reviewers"])),
+            "labels": list(map(lambda label: label['name'], pulls[0]["labels"])),
+        }
+
+    return pr_data
+
 def fetch_and_send_logs(splunk_url: str, splunk_token: str, github_token: str, repo_name: str, run_id: int, index: str, source_type: str, ssl_verify: bool, 
                         include_job_steps: bool, timeout: int, max_retries: int, debug: bool = False):
     """Fetch workflow logs and send them to Splunk"""
@@ -91,7 +124,8 @@ def fetch_and_send_logs(splunk_url: str, splunk_token: str, github_token: str, r
                 "owner": repo.owner.login,
                 "name": repo.name,
                 "full_name": repo.full_name
-            }
+            },
+            "pull_request": fetch_pull_request_info(github_token, repo.full_name, workflow_run.head_sha)
         },
         "sourcetype": source_type,
         "source": f"github:{repo.owner.login}/{repo.name}:workflow:{workflow_run.name}"
@@ -107,15 +141,6 @@ def fetch_and_send_logs(splunk_url: str, splunk_token: str, github_token: str, r
         jobs = workflow_run.jobs()
         for job in jobs:
             log_info(f"Fetching logs for job: {job.name} ({job.id})")
-            job_logs = f"Logs unavailable for job: {job.name}"
-
-            try:
-                log_url = job.logs_url()
-                log_response = requests.get(log_url, headers={'Authorization': f'token {github_token}'})
-                if log_response.status_code == 200:
-                    job_logs = log_response.text
-            except Exception as e:
-                job_logs = f"Error fetching logs: {str(e)}"
 
             job_event = {
                 "event": {
@@ -123,11 +148,10 @@ def fetch_and_send_logs(splunk_url: str, splunk_token: str, github_token: str, r
                     "job_name": job.name,
                     "job_status": job.conclusion or job.status,
                     "job_created_at": job.created_at.isoformat(),
-                    "job_completed_at": job.completed_at.isoformat(),
+                    "job_completed_at": job.completed_at.isoformat() if job.completed_at else None,
                     "job.status": job.status,
                     "workflow_name": workflow_run.name,
-                    "workflow_run_id": workflow_run.id,
-                    "logs": job_logs
+                    "workflow_run_id": workflow_run.id
                 },
                 "sourcetype": f"{source_type}:job",
                 "source": f"github:{repo.owner.login}/{repo.name}:workflow:{workflow_run.name}:job:{job.name}"

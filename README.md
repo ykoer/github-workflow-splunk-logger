@@ -101,6 +101,26 @@ This action automatically installs:
             "owner": "Red-Hat-SFDC",
             "name": "redhatcrm",
             "full_name": "Red-Hat-SFDC/redhatcrm"
+        },
+        "pull_request": {
+            "number": 123,
+            "title": "TEST-123: Create Feature A",
+            "state": "open",
+            "created_at": "2025-02-28T13:54:17Z",
+            "updated_at": "2025-03-03T16:41:35Z",
+            "closed_at": null,
+            "merged_at": null,
+            "merge_commit_sha": "acc94e889704fcc3e44f00455d19e0b6499e4793",
+            "assignees": [
+                "user1"
+            ],
+            "requested_reviewers": [
+                "user2",
+                "user3"
+            ],
+            "labels": [
+                "run-full-validation"
+            ]
         }
     },
     "sourcetype": "github:workflow:logs",
