@@ -1,0 +1,10 @@
+FROM registry.access.redhat.com/ubi9/python-312:latest
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ /app/
+
+CMD ["python", "splunk_logger.py"]
