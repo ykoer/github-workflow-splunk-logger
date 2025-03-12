@@ -264,7 +264,7 @@ jobs:
         run:
           echo ${{ matrix.run_id }}
 
-	   - name: Send Workflow Logs to Splunk
+      - name: Send Workflow Logs to Splunk
         uses: ykoer/github-workflow-splunk-logger@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
