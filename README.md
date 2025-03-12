@@ -47,7 +47,7 @@ jobs:
 | `index` | Splunk index to send the logs to | No | `github_workflows` |
 | `source_type` | Splunk source type for the data | No | `github:workflow:logs` |
 | `ssl_verify` | Whether to verify SSL certificates when connecting to Splunk | No | `true` |
-| `include_job_steps` | Whether to include individual job step logs | No | `true` |
+| `include_job_steps` | Whether to include individual job step logs | No | `false` |
 | `timeout` | HTTP request timeout in seconds | No | `30` |
 | `max_retries` | Maximum number of retries for failed requests | No | `3` |
 
@@ -94,17 +94,37 @@ This action automatically installs:
             "conclusion": "success",
             "created_at": "2025-02-28T16:41:49+00:00",
             "updated_at": "2025-02-28T16:43:21+00:00",
-            "url": "https://api.github.com/repos/Red-Hat-SFDC/redhatcrm/actions/runs/13592533082",
-            "html_url": "https://github.com/Red-Hat-SFDC/redhatcrm/actions/runs/13592533082"
+            "url": "https://api.github.com/repos/your-org/your-repo/actions/runs/13592533082",
+            "html_url": "https://github.com/your-org/your-repo/actions/runs/13592533082"
         },
         "repository": {
-            "owner": "Red-Hat-SFDC",
-            "name": "redhatcrm",
-            "full_name": "Red-Hat-SFDC/redhatcrm"
+            "owner": "your-org",
+            "name": "your-repo",
+            "full_name": "your-org/your-repo"
+        },
+        "pull_request": {
+            "number": 123,
+            "title": "TEST-123: Create Feature A",
+            "state": "open",
+            "created_at": "2025-02-28T13:54:17Z",
+            "updated_at": "2025-03-03T16:41:35Z",
+            "closed_at": null,
+            "merged_at": null,
+            "merge_commit_sha": "acc94e889704fcc3e44f00455d19e0b6499e4793",
+            "assignees": [
+                "user1"
+            ],
+            "requested_reviewers": [
+                "user2",
+                "user3"
+            ],
+            "labels": [
+                "run-full-validation"
+            ]
         }
     },
     "sourcetype": "github:workflow:logs",
-    "source": "github:Red-Hat-SFDC/redhatcrm:workflow:PR Validation - Auto Triggered"
+    "source": "github:your-org/your-repo:workflow:PR Validation - Auto Triggered"
 }
 ```
 
@@ -123,7 +143,7 @@ This action automatically installs:
         "logs": ""
     },
     "sourcetype": "github:workflow:logs:job",
-    "source": "github:Red-Hat-SFDC/redhatcrm:workflow:PR Validation - Auto Triggered:job:Validate Changed Packages"
+    "source": "github:your-org/your-repo:workflow:PR Validation - Auto Triggered:job:Validate Changed Packages"
 }
 ```
 ```json
@@ -140,6 +160,132 @@ This action automatically installs:
         "logs": "Logs unavailable for job: See if Static Analysis should run"
     },
     "sourcetype": "github:workflow:logs:job",
-    "source": "github:Red-Hat-SFDC/redhatcrm:workflow:PR Validation - Auto Triggered:job:See if Static Analysis should run"
+    "source": "github:your-org/your-repo:workflow:PR Validation - Auto Triggered:job:See if Static Analysis should run"
 }
+```
+
+## Running the GitHub Action
+
+### Trigger Workflow to Send Logs to Splunk After Each Workflow Completion
+
+This workflow sends workflow metadata to Splunk after each workflow completes. It is triggered automatically after any workflow finishes. The logs are sent using a custom GitHub Action, log_to_splunk, with authentication details stored in GitHub Secrets.
+
+```yaml
+name: Send Workflow Logs to Splunk
+
+# Controls when the action will run.
+on:
+  workflow_run:
+    workflows: ["*"]
+    types:
+      - completed
+
+env:
+  triggerID: ${{ github.event.workflow_run.id }}
+  triggerJob: ${{ github.event.workflow_run.name }}
+
+jobs:
+  WriteLogs:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.name!='WriteLogs'}}
+
+    steps:
+      - name: Send Workflow logs to Splunk
+        if: ${{ always() }}
+        uses: ykoer/github-workflow-splunk-logger@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          splunk_url: ${{ vars.HEC_URL }}
+          splunk_token: ${{ secrets.HEC_TOKEN }}
+          run_id: ${{  env.triggerID  }}
+```
+
+### Trigger Batch Process from a Scheduled Workflow
+
+This is an example GitHub Actions workflow for processing all workflow runs from the past hour. It retrieves unprocessed workflow run IDs, processes them individually, and updates the ID of the last processed run. If no new workflows are found, it logs a message indicating that there’s nothing to process.
+
+```yaml
+name: Fetch and Log Workflow Runs
+
+on:
+  schedule:
+    - cron: "0 */1 * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch-workflows:
+    runs-on: ubuntu-latest
+    outputs:
+      workflow_ids: ${{ steps.fetch-unprocessed-run-ids.outputs.workflow_ids }}
+
+    steps:
+      - name: Get Last Processed Run ID
+        id: get-last-processed-run-id
+        run: |
+          LAST_PROCESSED_RUN_ID=$(gh variable get --repo $GITHUB_REPOSITORY LAST_PROCESSED_RUN_ID --json value -q ".value" 2>/dev/null) || echo "Variable not found, defaulting to 0"
+          LAST_PROCESSED_RUN_ID=${LAST_PROCESSED_RUN_ID:-0}
+          echo "LAST_PROCESSED_RUN_ID=${LAST_PROCESSED_RUN_ID:-0}" >> $GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Fetch Unprocessed Workflow Runs
+        id: fetch-unprocessed-run-ids
+        run: |
+          # This script ensures that only completed GitHub workflow runs are processed while avoiding workflows that are still in progress.
+          # Steps:
+          # 1. Fetch the latest workflow runs from GitHub, sorted by workflow run ID.
+          # 2. Identify the oldest incomplete workflow.
+          # 3. Return an array of workflow IDs up to (but not including) the oldest incomplete workflow ID.
+          WORKFLOW_DATA=$(gh run list --repo $GITHUB_REPOSITORY --limit 100 --json databaseId,createdAt,displayTitle,status --jq "[.[] | select(.databaseId > $LAST_PROCESSED_RUN_ID and .displayTitle != \"Fetch and Log Workflow Runs\")] | sort_by(.databaseId)")
+
+          OLDEST_INCOMPLETE_ID=$(echo "$WORKFLOW_DATA" | jq '[.[] | select(.status != "completed") | .databaseId] | min // empty')
+
+          if [[ -n "$OLDEST_INCOMPLETE_ID" ]]; then
+            WORKFLOW_IDS=$(echo "$WORKFLOW_DATA" | jq "[.[] | select(.status == \"completed\" and .databaseId < $OLDEST_INCOMPLETE_ID)] | [.[].databaseId] | @json")
+          else
+            WORKFLOW_IDS=$(echo "$WORKFLOW_DATA" | jq "[.[] | select(.status == \"completed\")] | [.[].databaseId] | @json")
+          fi
+
+          echo "Workflow runs to process: $WORKFLOW_IDS"
+          echo "workflow_ids=$WORKFLOW_IDS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  process-workflows:
+    needs: fetch-workflows
+    runs-on: ubuntu-latest
+    if: ${{ needs.fetch-workflows.outputs.workflow_ids != '[]' && needs.fetch-workflows.outputs.workflow_ids != '' }}
+    strategy:
+      matrix:
+        run_id: ${{ fromJson(needs.fetch-workflows.outputs.workflow_ids || '[]') }}
+      max-parallel: 1
+    steps:
+      - name: Workflow Run to Process
+        run:
+          echo ${{ matrix.run_id }}
+
+	   - name: Send Workflow Logs to Splunk
+        uses: ykoer/github-workflow-splunk-logger@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          splunk_url: ${{ vars.HEC_URL }}
+          splunk_token: ${{ secrets.HEC_TOKEN }}
+          run_id: ${{ matrix.run_id }}
+
+      - name: Save Processed Run ID
+        if: success()
+        run: |
+          gh variable set LAST_PROCESSED_RUN_ID --repo $GITHUB_REPOSITORY --body "${{ matrix.run_id }}"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+
+  # Add a fallback job that runs when there are no workflow Run's to process
+  process-workflows-empty:
+    needs: fetch-workflows
+    runs-on: ubuntu-latest
+    if: ${{ needs.fetch-workflows.outputs.workflow_ids == '[]' || needs.fetch-workflows.outputs.workflow_ids == '' }}
+    steps:
+      - name: No workflows to process
+        run: echo "No new workflow runs to process"
 ```
